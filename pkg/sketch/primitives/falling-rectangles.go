@@ -1,11 +1,11 @@
 package primitives
 
 import (
-	"fmt"
 	"image/color"
 	"math"
 	"math/rand"
 
+	"github.com/devinmcgloin/sail/pkg/slog"
 	"github.com/fogleman/gg"
 )
 
@@ -19,37 +19,44 @@ func (fr FallingRectangles) Dimensions() (int, int) {
 
 // Width helper for finding the width of the canvas
 func (fr FallingRectangles) Width() float64 {
-	return 800.0
+	return 12000.0
 }
 
 // Height helper for finding the hieght of the canvas
 func (fr FallingRectangles) Height() float64 {
-	return 1300.0
+	return 19500.0
 }
 
 // Draw is the primary rendering method
 func (fr FallingRectangles) Draw(context *gg.Context, rand *rand.Rand) {
-	margin := rand.Float64()*200 + 10
+	margin := rand.Float64()*(fr.Width()*0.15) + fr.Width()*0.04
 
 	avaliableSpace := fr.Width() - margin*2
 	sizeFactor := math.Floor(rand.Float64()*25 + 5)
-	noiseFactor := rand.Float64() * 2
 	boxSize := avaliableSpace / sizeFactor
 	halfBox := boxSize / 2
 
-	context.SetLineWidth(1)
+	noiseFactor := rand.Float64() * 4
+
+	context.SetLineWidth(fr.Width() * 0.001)
 	context.SetColor(color.Black)
 
-	fmt.Printf("\tMargin: %f\n\tAvaliableSpace: %f\n\tsizeFactor: %f\n\tboxSize: %f\n", margin, avaliableSpace, sizeFactor, boxSize)
+	slog.InfoValues("margin", margin, "avaliableSpace", avaliableSpace, "sizeFactor", sizeFactor, "noiseFactor", noiseFactor, "boxSize", boxSize)
 
 	for x := margin + halfBox; x < fr.Width()-margin; x += boxSize {
 		rowIndex := 0.0
 		for y := margin + halfBox; y < fr.Height()-margin; y += boxSize {
-			normalizedNoise := (rowIndex / (fr.Width() - margin)) * (noiseFactor * 10)
-			rotate := normalizedNoise * rand.NormFloat64()
+			sectionOffset := rowIndex * boxSize
+			normalizedNoise := (sectionOffset / (fr.Height() - margin))
+			if normalizedNoise > 1 {
+				slog.InfoValues("sectionOffset", sectionOffset, "normalizedNoise", normalizedNoise, "fr.Height() - margin", fr.Height()-margin)
+			}
+			adjustedNoise := normalizedNoise * noiseFactor
+			rotate := adjustedNoise * rand.NormFloat64()
 			context.Push()
 			context.RotateAbout(rotate, x, y)
-			context.Translate(rand.Float64()*rowIndex*noiseFactor, rand.Float64()*rowIndex*noiseFactor)
+			translationFactor := adjustedNoise * noiseFactor * fr.Height() * 0.01
+			context.Translate(rand.Float64()*translationFactor, rand.Float64()*translationFactor)
 			context.DrawRectangle(x-halfBox, y-halfBox, boxSize, boxSize)
 			context.Stroke()
 			context.Pop()
